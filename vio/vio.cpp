@@ -1,5 +1,8 @@
-#include "zed_vio.hpp"
+#include <sstream>
 #include <iostream>
+
+#include "zed_vio.hpp"
+#include "zmq_publisher.hpp"
 
 int main() {
     ZedVio vio;
@@ -9,11 +12,20 @@ int main() {
         return 1;
     }
 
+    ZmqPublisher publisher;
+
+    if (!publisher.open("tcp://*:5555")) {
+        std::cerr << "Failed to start ZeroMQ publisher" << std::endl;
+        return 1;
+    }
+
     VioState state;
 
     while (true) {
         if (vio.read(state)) {
-            std::cout
+            std::ostringstream msg;
+
+            msg
                 << state.timestamp_ns << ","
                 << state.position.x << ","
                 << state.position.y << ","
@@ -28,8 +40,9 @@ int main() {
                 << state.angular_velocity.x << ","
                 << state.angular_velocity.y << ","
                 << state.angular_velocity.z << ","
-                << state.tracking_state
-                << std::endl;
+                << state.tracking_state;
+
+            publisher.publish(msg.str());
         }
     }
 }

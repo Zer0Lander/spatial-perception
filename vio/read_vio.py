@@ -1,20 +1,14 @@
-import subprocess
+import zmq
 
-proc = subprocess.Popen(
-    ["./build/vio"],
-    cwd="/home/abdul/spatial_perception/vio",
-    stdout=subprocess.PIPE,
-    text=True,
-    bufsize=1,
-)
+context = zmq.Context()
+socket = context.socket(zmq.SUB)
 
-for line in proc.stdout:
-    line = line.strip()
+socket.connect("tcp://127.0.0.1:5555")
+socket.setsockopt_string(zmq.SUBSCRIBE, "")
 
-    if not line:
-        continue
-
-    parts = line.split(",")
+while True:
+    message = socket.recv_string()
+    parts = message.split(",")
 
     if len(parts) != 15:
         continue
