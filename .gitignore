@@ -1,0 +1,21 @@
+# Build artifacts
+build/
+*/build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Logs / recordings / generated data
+*.log
+*.svo
+*.svo2
