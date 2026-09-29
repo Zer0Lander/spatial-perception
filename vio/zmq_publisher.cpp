@@ -38,3 +38,7 @@ bool ZmqPublisher::publish(const std::string& message) {
 
     return rc >= 0;
 }
+
+std::string ZmqPublisher::lastError() const {
+    return zmq_strerror(zmq_errno());
+}

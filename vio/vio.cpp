@@ -1,8 +1,9 @@
-#include <sstream>
 #include <iostream>
 
 #include "zed_vio.hpp"
 #include "zmq_publisher.hpp"
+
+#include <nlohmann/json.hpp>
 
 int main() {
     ZedVio vio;
@@ -15,7 +16,11 @@ int main() {
     ZmqPublisher publisher;
 
     if (!publisher.open("tcp://*:5555")) {
-        std::cerr << "Failed to start ZeroMQ publisher" << std::endl;
+        std::cerr
+            << "Failed to start ZeroMQ publisher: "
+            << publisher.lastError()
+            << std::endl;
+
         return 1;
     }
 
@@ -23,26 +28,43 @@ int main() {
 
     while (true) {
         if (vio.read(state)) {
-            std::ostringstream msg;
+            nlohmann::json msg = {
+                {"timestamp_ns", state.timestamp_ns},
 
-            msg
-                << state.timestamp_ns << ","
-                << state.position.x << ","
-                << state.position.y << ","
-                << state.position.z << ","
-                << state.orientation.x << ","
-                << state.orientation.y << ","
-                << state.orientation.z << ","
-                << state.orientation.w << ","
-                << state.linear_velocity.x << ","
-                << state.linear_velocity.y << ","
-                << state.linear_velocity.z << ","
-                << state.angular_velocity.x << ","
-                << state.angular_velocity.y << ","
-                << state.angular_velocity.z << ","
-                << state.tracking_state;
+                {"position", {
+                    {"x", state.position.x},
+                    {"y", state.position.y},
+                    {"z", state.position.z}
+                }},
 
-            publisher.publish(msg.str());
+                {"orientation", {
+                    {"x", state.orientation.x},
+                    {"y", state.orientation.y},
+                    {"z", state.orientation.z},
+                    {"w", state.orientation.w}
+                }},
+
+                {"linear_velocity", {
+                    {"x", state.linear_velocity.x},
+                    {"y", state.linear_velocity.y},
+                    {"z", state.linear_velocity.z}
+                }},
+
+                {"angular_velocity", {
+                    {"x", state.angular_velocity.x},
+                    {"y", state.angular_velocity.y},
+                    {"z", state.angular_velocity.z}
+                }},
+
+                {"tracking_state", state.tracking_state}
+            };
+
+            if (!publisher.publish(msg.dump())) {
+                std::cerr
+                    << "Failed to publish VIO message: "
+                    << publisher.lastError()
+                    << std::endl;
+            }
         }
     }
 }
