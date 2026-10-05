@@ -8,28 +8,46 @@ bool ZedVio::open() {
     auto err = zed_.open(init);
 
     if (err != sl::ERROR_CODE::SUCCESS) {
+        last_error_ = "Failed to open ZED camera: ";
+        last_error_ += sl::toString(err).c_str();
         return false;
     }
 
     sl::PositionalTrackingParameters tracking;
+    tracking.enable_area_memory = false;
 
     err = zed_.enablePositionalTracking(tracking);
 
-    return err == sl::ERROR_CODE::SUCCESS;
-}
-
-bool ZedVio::read(VioState& state) {
-    if (zed_.grab() != sl::ERROR_CODE::SUCCESS) {
+    if (err != sl::ERROR_CODE::SUCCESS) {
+        last_error_ = "Failed to enable ZED positional tracking: ";
+        last_error_ += sl::toString(err).c_str();
+        zed_.close();
         return false;
     }
 
+    last_error_.clear();
+    return true;
+}
+
+bool ZedVio::read(VioState& state) {
+    const auto grab_result = zed_.grab();
+    if (grab_result != sl::ERROR_CODE::SUCCESS) {
+        last_error_ = "Failed to grab ZED frame: ";
+        last_error_ += sl::toString(grab_result).c_str();
+        return false;
+    }
+
+    last_error_.clear();
+
     sl::Pose pose;
 
-    auto tracking_state =
-        zed_.getPosition(pose, sl::REFERENCE_FRAME::WORLD);
+    const auto tracking_state = zed_.getPosition(pose, sl::REFERENCE_FRAME::WORLD);
 
-    auto p = pose.getTranslation();
-    auto q = pose.getOrientation();
+    const auto p = pose.getTranslation();
+    const auto q = pose.getOrientation();
+
+    state.pose_valid = pose.valid && tracking_state == sl::POSITIONAL_TRACKING_STATE::OK;
+    state.pose_confidence = pose.pose_confidence;
 
     state.timestamp_ns = pose.timestamp.getNanoseconds();
 
@@ -53,4 +71,8 @@ bool ZedVio::read(VioState& state) {
     state.tracking_state = sl::toString(tracking_state).c_str();
 
     return true;
+}
+
+const std::string& ZedVio::lastError() const {
+    return last_error_;
 }

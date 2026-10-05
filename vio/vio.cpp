@@ -1,4 +1,7 @@
+#include <chrono>
 #include <iostream>
+#include <string>
+#include <thread>
 
 #include "zed_vio.hpp"
 #include "zmq_publisher.hpp"
@@ -9,7 +12,7 @@ int main() {
     ZedVio vio;
 
     if (!vio.open()) {
-        std::cerr << "Failed to initialize ZED VIO" << std::endl;
+        std::cerr << vio.lastError() << std::endl;
         return 1;
     }
 
@@ -25,11 +28,24 @@ int main() {
     }
 
     VioState state;
+    std::string previous_tracking_state;
+    auto next_grab_error_log = std::chrono::steady_clock::time_point::min();
 
     while (true) {
         if (vio.read(state)) {
+            if (state.tracking_state != previous_tracking_state) {
+                std::cerr
+                    << "ZED tracking state: " << state.tracking_state
+                    << ", pose_valid=" << std::boolalpha << state.pose_valid
+                    << ", confidence=" << state.pose_confidence
+                    << std::endl;
+                previous_tracking_state = state.tracking_state;
+            }
+
             nlohmann::json msg = {
                 {"timestamp_ns", state.timestamp_ns},
+                {"pose_valid", state.pose_valid},
+                {"pose_confidence", state.pose_confidence},
 
                 {"position", {
                     {"x", state.position.x},
@@ -65,6 +81,13 @@ int main() {
                     << publisher.lastError()
                     << std::endl;
             }
+        } else {
+            const auto now = std::chrono::steady_clock::now();
+            if (now >= next_grab_error_log) {
+                std::cerr << vio.lastError() << std::endl;
+                next_grab_error_log = now + std::chrono::seconds(1);
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
     }
 }
