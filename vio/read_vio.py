@@ -33,6 +33,12 @@ def validate_message(data):
     if not isinstance(data, dict):
         raise ValueError("message must be a JSON object")
 
+    schema_version = data.get("schema_version")
+    if isinstance(schema_version, bool) or not isinstance(schema_version, int):
+        raise ValueError("schema_version must be the integer 1")
+    if schema_version != 1:
+        raise ValueError("schema_version must be 1")
+
     timestamp_ns = data.get("timestamp_ns")
     if isinstance(timestamp_ns, bool) or not isinstance(timestamp_ns, int):
         raise ValueError("timestamp_ns must be an integer")
