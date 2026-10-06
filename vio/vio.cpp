@@ -46,6 +46,8 @@ int main() {
                 {"timestamp_ns", state.timestamp_ns},
                 {"pose_valid", state.pose_valid},
                 {"pose_confidence", state.pose_confidence},
+                {"pose_frame", "zed_world"},
+                {"twist_frame", "zed_left_camera"},
 
                 {"position", {
                     {"x", state.position.x},
