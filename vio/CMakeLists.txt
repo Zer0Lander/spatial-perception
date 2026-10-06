@@ -21,8 +21,8 @@ target_include_directories(vio PRIVATE
     ${ZMQ_INCLUDE_DIRS}
 )
 
-target_link_libraries(vio
+target_link_libraries(vio PRIVATE
+    ${ZMQ_LINK_LIBRARIES}
     ${ZED_LIBRARIES}
     ${CUDA_LIBRARIES}
-    ${ZMQ_LIBRARIES}
 )
